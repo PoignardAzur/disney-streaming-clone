@@ -3,10 +3,10 @@ use tracing::{trace_span, Span};
 
 use widget_cruncher::promise::PromiseToken;
 use widget_cruncher::widget::prelude::*;
-use widget_cruncher::widget::{AsWidgetPod, ClipBox, Flex, Label, Spinner, WidgetPod};
+use widget_cruncher::widget::{AsWidgetPod, ClipBox, Flex, Label, SizedBox, Spinner, WidgetPod};
 use widget_cruncher::Point;
 
-use crate::thumbnail::Thumbnail;
+use crate::thumbnail::{Thumbnail, THUMBNAIL_MAX_SIZE};
 
 pub struct ContentSetMetadata {
     pub title: String,
@@ -32,7 +32,9 @@ pub struct ContentSet {
 impl ContentSet {
     pub fn new(row: usize, data: ContentSetMetadata) -> Self {
         let title_label = Label::new(data.title.clone());
-        let placeholder = Spinner::new();
+        let placeholder = SizedBox::new(Spinner::new())
+            .width(THUMBNAIL_MAX_SIZE / 2.0)
+            .height(THUMBNAIL_MAX_SIZE / 2.0);
         Self {
             row,
             data,
@@ -45,7 +47,6 @@ impl ContentSet {
         }
     }
 }
-
 
 // Loads and parses "https://cd-static.bamgrid.com/dp-117731241344/sets/<refId>.json"
 fn load_content_set(url: &str) -> Result<Vec<String>, reqwest::Error> {

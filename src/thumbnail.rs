@@ -6,6 +6,7 @@ use widget_cruncher::widget::{AsWidgetPod, WebImage, WidgetPod};
 use widget_cruncher::{Color, Selector};
 
 pub const CHANGE_SELECTED_ITEM: Selector<(usize, usize)> = Selector::new("change_selected_item");
+pub const THUMBNAIL_MAX_SIZE: f64 = 200.0;
 
 pub struct Thumbnail {
     // We store which row and column this is in, to handle arrow selection "manually"
@@ -83,7 +84,6 @@ impl Widget for Thumbnail {
     fn layout(&mut self, ctx: &mut LayoutCtx, _bc: &BoxConstraints, env: &Env) -> Size {
         // We essentially do a linear interpolation
         // between "90% of max size" and "max size"
-        const THUMBNAIL_MAX_SIZE: f64 = 200.0;
         let square_side = THUMBNAIL_MAX_SIZE * (0.90 + (self.selected_progress as f64) / 50.0);
         let child_constraints = BoxConstraints::new(
             Size::new(square_side, square_side),

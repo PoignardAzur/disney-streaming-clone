@@ -5,7 +5,7 @@ use widget_cruncher::promise::PromiseToken;
 use widget_cruncher::shell::keyboard_types::Key;
 use widget_cruncher::widget::prelude::*;
 use widget_cruncher::widget::{AsWidgetPod, ClipBox, Flex, Spinner, WidgetPod};
-use widget_cruncher::{Command, Point, Selector, Target};
+use widget_cruncher::{Color, Command, Point, Selector, Target};
 
 use crate::content_set::{ContentSet, ContentSetMetadata};
 use crate::thumbnail::CHANGE_SELECTED_ITEM;
@@ -79,6 +79,7 @@ impl Widget for RootWidget {
                                     flex.clear(flex_state);
                                     for (row, child) in children.into_iter().enumerate() {
                                         flex.add_child(flex_state, ContentSet::new(row, child));
+                                        flex.add_spacer(flex_state, 30.0);
                                     }
                                     // when this closure returns, the framework automatically merges
                                     // invalidated state
@@ -154,6 +155,12 @@ impl Widget for RootWidget {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, env: &Env) {
+        ctx.init();
+
+        const BACKGROUND_COLOR: Color = Color::from_rgba32_u32(0x07_1b_0f_ff);
+
+        let paint_rect = ctx.size().to_rect();
+        ctx.fill(paint_rect, &BACKGROUND_COLOR);
         self.children.paint(ctx, env)
     }
 
