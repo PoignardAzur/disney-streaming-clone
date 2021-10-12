@@ -12,6 +12,7 @@ use crate::thumbnail::CHANGE_SELECTED_ITEM;
 
 const REQUEST_FOCUS: Selector = Selector::new("request_focus");
 
+// Loads and parses https://cd-static.bamgrid.com/dp-117731241344/home.json
 fn load_collection(url: &str) -> Result<Vec<ContentSetMetadata>, reqwest::Error> {
     let json: serde_json::Value = reqwest::blocking::get(url)?.json()?;
     let containers = json["data"]["StandardCollection"]["containers"].clone();
@@ -31,8 +32,15 @@ fn load_collection(url: &str) -> Result<Vec<ContentSetMetadata>, reqwest::Error>
 }
 
 pub struct RootWidget {
+    // The promise token is mostly a type-system aid to "prove" to the compiler
+    // that the result you're getting is the same you asked for earlier.
     pub children_promise: PromiseToken<Vec<ContentSetMetadata>>,
+
+    // What's we're actually displaying.
     pub children: WidgetPod<ClipBox<Flex>>,
+
+    // A very bare-bones "cursor" sent to every child to
+    // choose which one should have the "is selected" outline and big size.
     pub selected_item: (usize, usize),
 }
 
@@ -55,12 +63,14 @@ impl Widget for RootWidget {
     fn on_event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
         ctx.init();
         match event {
+            // This happens after the callback passed to `ctx.compute_in_background` returns
             Event::PromiseResult(result) => {
                 if let Some(children) = result.try_get(self.children_promise) {
                     // TODO - Need to find a more idiomatic way to do this.
                     self.children.recurse_pass(
                         "custom_pass",
                         &mut ctx.widget_state,
+                        // clipbox is an alias of self.children in this closure
                         |clipbox, clipbox_state| {
                             clipbox.child.recurse_pass(
                                 "custom_pass",
@@ -70,6 +80,8 @@ impl Widget for RootWidget {
                                     for (row, child) in children.into_iter().enumerate() {
                                         flex.add_child(flex_state, ContentSet::new(row, child));
                                     }
+                                    // when this closure returns, the framework automatically merges
+                                    // invalidated state
                                 },
                             );
                         },
@@ -114,12 +126,18 @@ impl Widget for RootWidget {
 
         ctx.init();
         match event {
+            // This is a bit of a hack: first RootWidget registers as able to receive events,
+            // then it sends a Command to itself so that it can request_focus(). Requesting
+            // focus in necessary to get keyboard events.
+            // This is unnecessarily complicated; probably should change Druid's architecture
+            // to make it simpler.
             LifeCycle::BuildFocusChain => {
                 ctx.register_for_focus();
                 ctx.submit_command(
                     Command::from(REQUEST_FOCUS).to(Target::Widget(ctx.widget_id())),
                 );
             }
+            // This is essentially a second constructor.
             LifeCycle::WidgetAdded => {
                 self.children_promise =
                     ctx.compute_in_background(move |_| load_collection(COLLECTION_URL).unwrap());
@@ -147,6 +165,8 @@ impl Widget for RootWidget {
         smallvec![&mut self.children as &mut dyn AsWidgetPod]
     }
 
+    // This isn't useful for the application itself, but it makes traces more readable
+    // when debugging
     fn make_trace_span(&self) -> Span {
         trace_span!("RootWidget")
     }

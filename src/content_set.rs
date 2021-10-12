@@ -14,9 +14,16 @@ pub struct ContentSetMetadata {
 }
 
 pub struct ContentSet {
-    pub row: usize,
     pub data: ContentSetMetadata,
+
+    // We store which row is to pass to thumbnails
+    pub row: usize,
+
+    // The promise token is mostly a type-system aid to "prove" to the compiler
+    // that the result you're getting is the same you asked for earlier.
     pub children_promise: PromiseToken<Vec<String>>,
+
+    // What's we're actually displaying.
     pub children: WidgetPod<Flex>,
 }
 
@@ -39,6 +46,8 @@ impl ContentSet {
     }
 }
 
+
+// Loads and parses "https://cd-static.bamgrid.com/dp-117731241344/sets/<refId>.json"
 fn load_content_set(url: &str) -> Result<Vec<String>, reqwest::Error> {
     let json: serde_json::Value = reqwest::blocking::get(url)?.json()?;
     let items = json["data"]["CuratedSet"]["items"].clone();
@@ -64,6 +73,7 @@ impl Widget for ContentSet {
     fn on_event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
         ctx.init();
         match event {
+            // This happens after the callback passed to `ctx.compute_in_background` returns
             Event::PromiseResult(result) => {
                 if let Some(children) = result.try_get(self.children_promise) {
                     let row = self.row;
@@ -71,6 +81,7 @@ impl Widget for ContentSet {
                     self.children.recurse_pass(
                         "custom_pass",
                         &mut ctx.widget_state,
+                        // flex is an alias of self.children in this closure
                         |flex, flex_state| {
                             flex.clear(flex_state);
                             flex.add_child(flex_state, Label::new(title));
@@ -82,6 +93,8 @@ impl Widget for ContentSet {
                                 flex_state,
                                 ClipBox::new(titles).constrain_vertical(true),
                             );
+                            // when this closure returns, the framework automatically merges
+                            // invalidated state
                         },
                     );
 
@@ -104,6 +117,8 @@ impl Widget for ContentSet {
 
         ctx.init();
         match event {
+            // This is essentially a second constructor.
+            // Bit of an anti-pattern, IMO, but I haven't yet found a workaround.
             LifeCycle::WidgetAdded => {
                 self.children_promise =
                     ctx.compute_in_background(move |_| load_content_set(&content_set_url).unwrap());
@@ -131,6 +146,8 @@ impl Widget for ContentSet {
         smallvec![&mut self.children as &mut dyn AsWidgetPod]
     }
 
+    // This isn't useful for the application itself, but it makes traces more readable
+    // when debugging
     fn make_trace_span(&self) -> Span {
         trace_span!("ContentSet")
     }

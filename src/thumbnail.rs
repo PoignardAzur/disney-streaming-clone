@@ -8,9 +8,14 @@ use widget_cruncher::{Color, Selector};
 pub const CHANGE_SELECTED_ITEM: Selector<(usize, usize)> = Selector::new("change_selected_item");
 
 pub struct Thumbnail {
+    // We store which row and column this is in, to handle arrow selection "manually"
     pub row: usize,
     pub column: usize,
+
+    // An image loaded from a URL, with a spinner placeholder
     pub inner: WidgetPod<WebImage>,
+
+    // Animation state for the "selected" animation
     pub selected: bool,
     pub selected_progress: u32,
 }
@@ -76,6 +81,8 @@ impl Widget for Thumbnail {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, _bc: &BoxConstraints, env: &Env) -> Size {
+        // We essentially do a linear interpolation
+        // between "90% of max size" and "max size"
         const THUMBNAIL_MAX_SIZE: f64 = 200.0;
         let square_side = THUMBNAIL_MAX_SIZE * (0.90 + (self.selected_progress as f64) / 50.0);
         let child_constraints = BoxConstraints::new(
@@ -109,6 +116,8 @@ impl Widget for Thumbnail {
         smallvec![&mut self.inner as &mut dyn AsWidgetPod]
     }
 
+    // This isn't useful for the application itself, but it makes traces more readable
+    // when debugging
     fn make_trace_span(&self) -> Span {
         trace_span!("Thumbnail")
     }
